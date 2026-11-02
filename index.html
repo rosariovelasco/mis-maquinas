@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mis Máquinas</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Concepto: noche morada con color de neón. Cada máquina tiene su propio degradado vivo, y todo se mueve un poco: fondo, barra del encabezado, tarjetas y el peso cuando cambia. */
+:root {
+  --bg: #0b0620;
+  --bg-2: #1a0b4a;
+  --glass: rgba(255, 255, 255, .09);
+  --glass-2: rgba(255, 255, 255, .16);
+  --line: rgba(255, 255, 255, .18);
+  --fg: #ffffff;
+  --muted: #c4bbea;
+  --hot: #ff2d87;
+  --amber: #ffb300;
+  --cyan: #00e0ff;
+  --lime: #c8ff3b;
+  --violet: #8f5bff;
+  --danger: #ff5470;
+  --g1: #ff2d87;
+  --g2: #ffb300;
+  --font-display: "Barlow Condensed", "Arial Narrow", Impact, sans-serif;
+  --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.4;
+  padding-block: 0 120px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  overflow-x: hidden;
+}
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+.wrap { max-width: 640px; margin: 0 auto; }
+
+/* Fondo animado */
+.bg { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.bg i { position: absolute; width: 70vmax; height: 70vmax; border-radius: 50%; filter: blur(70px); opacity: .55; }
+.bg i:nth-child(1) { background: var(--hot); top: -30vmax; left: -25vmax; animation: drift1 18s ease-in-out infinite alternate; }
+.bg i:nth-child(2) { background: var(--violet); bottom: -35vmax; right: -30vmax; animation: drift2 22s ease-in-out infinite alternate; }
+.bg i:nth-child(3) { background: #0a8cff; width: 45vmax; height: 45vmax; top: 35%; left: 40%; opacity: .3; animation: drift3 26s ease-in-out infinite alternate; }
+@keyframes drift1 { to { transform: translate(18vmax, 14vmax) scale(1.15); } }
+@keyframes drift2 { to { transform: translate(-16vmax, -12vmax) scale(1.1); } }
+@keyframes drift3 { to { transform: translate(-22vmax, 10vmax) scale(.85); } }
+
+/* Encabezado */
+.hero { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-block: 20px 8px; }
+h1 {
+  margin: 0; font-family: var(--font-display); font-weight: 800; font-style: italic;
+  font-size: 46px; line-height: .95; text-transform: uppercase; letter-spacing: .01em;
+  background: linear-gradient(100deg, var(--hot), var(--amber), var(--cyan), var(--hot));
+  background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: slide 6s linear infinite;
+}
+@keyframes slide { to { background-position: 250% 0; } }
+.count {
+  display: inline-block; margin-top: 8px; padding: 3px 10px; border-radius: 999px;
+  background: var(--glass); border: 1px solid var(--line); font-size: 13px; font-weight: 600; color: var(--muted);
+}
+.count:empty { display: none; }
+.barbell { width: 128px; height: auto; flex: none; overflow: visible; }
+.lift { transform-box: fill-box; transform-origin: center; animation: lift 2s cubic-bezier(.5, 0, .5, 1) infinite; }
+@keyframes lift { 0%, 100% { transform: translateY(8px) rotate(-3deg); } 50% { transform: translateY(-8px) rotate(3deg); } }
+.sp { animation: twinkle 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.sp.s2 { animation-delay: .5s; } .sp.s3 { animation-delay: 1s; }
+@keyframes twinkle { 0%, 100% { opacity: 0; transform: scale(.3); } 50% { opacity: 1; transform: scale(1.2); } }
+
+.search {
+  width: 100%; margin-top: 8px; padding: 13px 16px; border-radius: 14px;
+  background: var(--glass); border: 1px solid var(--line);
+}
+.search::placeholder { color: var(--muted); }
+.notice {
+  margin: 12px 0 0; padding: 10px 14px; border-radius: 12px; font-size: 14px;
+  background: var(--glass); color: var(--muted); border: 1px solid var(--line);
+}
+.notice.err { color: #ffd3da; border-color: var(--danger); background: rgba(255, 84, 112, .18); }
+
+/* Lista y tarjetas */
+.list { display: flex; flex-direction: column; gap: 14px; padding-top: 16px; }
+.card {
+  position: relative; isolation: isolate; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;
+  width: 100%; min-height: 124px; padding: 16px 18px; border: 0; border-radius: 22px; overflow: hidden;
+  text-align: left; color: #fff;
+  box-shadow: 0 14px 30px -14px var(--g1);
+  transition: transform .15s;
+}
+.card:active { transform: scale(.975); }
+.enter .card { animation: rise .6s cubic-bezier(.2, .9, .25, 1.15) both; animation-delay: calc(var(--i) * 80ms); }
+@keyframes rise { from { opacity: 0; transform: translateY(26px) scale(.96); } to { opacity: 1; transform: none; } }
+.c-bg {
+  position: absolute; inset: 0; z-index: -3;
+  background: linear-gradient(120deg, var(--g1), var(--g2), var(--g1)); background-size: 220% 220%;
+  animation: shift 7s ease-in-out infinite alternate;
+}
+@keyframes shift { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
+.c-img { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; display: block; }
+.c-tint { position: absolute; inset: 0; z-index: -2; background: linear-gradient(120deg, var(--g1), var(--g2)); opacity: .38; mix-blend-mode: color; }
+.c-shade { position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(8, 3, 28, .72), rgba(8, 3, 28, .05) 72%), linear-gradient(0deg, rgba(8, 3, 28, .45), transparent 55%); }
+.c-art {
+  position: absolute; z-index: -2; right: -14px; top: 50%; width: 150px; height: 150px; color: #fff; opacity: .26;
+  transform: translateY(-50%) rotate(-18deg); animation: spin 9s ease-in-out infinite alternate;
+}
+.c-art svg { width: 100%; height: 100%; display: block; }
+@keyframes spin { to { transform: translateY(-54%) rotate(-4deg) scale(1.08); } }
+.c-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.name { display: block; font-family: var(--font-display); font-weight: 800; font-style: italic; font-size: 26px; line-height: 1.02; text-transform: uppercase; overflow-wrap: anywhere; text-shadow: 0 2px 10px rgba(0, 0, 0, .35); }
+.meta { display: block; font-size: 14px; font-weight: 500; text-shadow: 0 1px 8px rgba(0, 0, 0, .45); }
+.chip {
+  align-self: flex-start; margin-top: 4px; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600;
+  background: rgba(8, 3, 28, .45); backdrop-filter: blur(4px);
+}
+.chip:empty { display: none; }
+.c-wt { text-align: right; line-height: .9; white-space: nowrap; }
+.num {
+  font-family: var(--font-display); font-weight: 800; font-style: italic; font-size: 60px;
+  font-variant-numeric: tabular-nums; text-shadow: 0 3px 14px rgba(0, 0, 0, .4);
+}
+.unit { font-family: var(--font-display); font-weight: 700; font-size: 22px; margin-left: 3px; text-shadow: 0 2px 8px rgba(0, 0, 0, .4); }
+
+/* Pantalla de una máquina */
+.sheet {
+  position: fixed; inset: 0; z-index: 20; overflow-y: auto;
+  background: radial-gradient(circle at 15% 0%, #4a1fb5 0, transparent 55%), radial-gradient(circle at 100% 100%, #7a1664 0, transparent 50%), var(--bg);
+  padding-top: max(16px, env(safe-area-inset-top, 0px));
+  padding-bottom: max(28px, env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.detail { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+.detail.enter > * { animation: rise .5s cubic-bezier(.2, .9, .25, 1.1) both; }
+.detail.enter > *:nth-child(2) { animation-delay: .07s; }
+.detail.enter > *:nth-child(3) { animation-delay: .14s; }
+.detail.enter > *:nth-child(4) { animation-delay: .21s; }
+.detail.enter > *:nth-child(5) { animation-delay: .28s; }
+.d-hero {
+  position: relative; isolation: isolate; height: 230px; border-radius: 26px; overflow: hidden; color: #fff;
+  display: flex; align-items: flex-end; padding: 18px; box-shadow: 0 18px 40px -16px var(--g1);
+}
+.d-hero .c-art { width: 220px; height: 220px; right: -30px; opacity: .3; }
+.d-name {
+  margin: 0; font-family: var(--font-display); font-weight: 800; font-style: italic; font-size: 40px; line-height: .98;
+  text-transform: uppercase; overflow-wrap: anywhere; text-shadow: 0 3px 16px rgba(0, 0, 0, .45);
+}
+.back {
+  position: absolute; top: 14px; left: 14px; padding: 9px 16px; border-radius: 999px; font-weight: 600;
+  background: rgba(8, 3, 28, .5); backdrop-filter: blur(6px); border: 1px solid var(--line);
+}
+.panel { display: flex; flex-direction: column; gap: 14px; padding: 18px; border-radius: 24px; background: var(--glass); border: 1px solid var(--line); }
+.d-wrap { position: relative; }
+.d-weight { display: flex; align-items: baseline; gap: 6px; }
+.d-weight .num {
+  font-size: 112px; line-height: .85; text-shadow: none;
+  background: linear-gradient(120deg, var(--g1), var(--g2)); -webkit-background-clip: text; background-clip: text; color: transparent;
+  display: inline-block; filter: drop-shadow(0 6px 18px color-mix(in srgb, var(--g1) 55%, transparent));
+}
+.d-weight .unit { font-size: 34px; color: var(--muted); text-shadow: none; }
+.d-wrap .meta { margin-top: 8px; color: var(--muted); text-shadow: none; }
+.pop { animation: pop .45s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.22) rotate(-3deg); } 100% { transform: scale(1); } }
+.burst {
+  position: absolute; right: 4px; top: 0; font-family: var(--font-display); font-weight: 800; font-style: italic; font-size: 34px;
+  color: var(--lime); text-shadow: 0 2px 12px rgba(0, 0, 0, .5); pointer-events: none; animation: floatup .9s ease-out forwards;
+}
+.burst.down { color: var(--danger); }
+@keyframes floatup { from { opacity: 1; transform: translateY(14px) scale(.8); } to { opacity: 0; transform: translateY(-46px) scale(1.25); } }
+
+.stepper { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.step {
+  padding: 16px 0; border-radius: 16px; border: 1px solid var(--line); background: var(--glass-2);
+  font-family: var(--font-display); font-weight: 800; font-style: italic; font-size: 30px; letter-spacing: .02em;
+  transition: transform .1s;
+}
+.step.plus { border: 0; background: linear-gradient(120deg, var(--g1), var(--g2)); box-shadow: 0 10px 24px -10px var(--g1); text-shadow: 0 2px 8px rgba(0, 0, 0, .35); }
+.step:active { transform: scale(.94); }
+
+.label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+textarea.notes, .field input, .field textarea {
+  width: 100%; padding: 13px 14px; border-radius: 14px; background: rgba(8, 3, 28, .55);
+  border: 1px solid var(--line); resize: vertical;
+}
+textarea.notes { min-height: 96px; }
+.field input:focus, .field textarea:focus, textarea.notes:focus { border-color: var(--cyan); outline: 0; box-shadow: 0 0 0 3px rgba(0, 224, 255, .25); }
+
+.bars { display: flex; align-items: flex-end; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+.bar { flex: 1 0 44px; display: flex; flex-direction: column; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
+.bv { font-size: 13px; font-weight: 600; }
+.bf { width: 100%; border-radius: 10px 10px 4px 4px; background: linear-gradient(0deg, var(--g1), var(--g2)); transform-origin: bottom; }
+.detail.enter .bf { animation: grow .7s cubic-bezier(.2, .9, .3, 1.1) both; animation-delay: calc(.3s + var(--k) * 70ms); }
+@keyframes grow { from { transform: scaleY(0); } }
+.bd { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn {
+  padding: 12px 18px; border-radius: 14px; border: 1px solid var(--line); background: var(--glass-2); font-weight: 600;
+}
+.btn.primary { border: 0; background: linear-gradient(120deg, var(--hot), var(--amber)); box-shadow: 0 10px 24px -10px var(--hot); }
+.btn.danger { color: #ffb3c0; border-color: var(--danger); background: rgba(255, 84, 112, .12); }
+.btn.danger.solid { background: var(--danger); color: #fff; border-color: var(--danger); }
+.spacer { flex: 1; }
+
+/* Estado vacío */
+.empty { text-align: center; padding: 40px 16px 24px; color: var(--muted); }
+.empty .barbell { width: 170px; margin: 0 auto; display: block; }
+.empty h2 { margin: 14px 0 6px; color: var(--fg); font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: 30px; text-transform: uppercase; line-height: 1; }
+.empty p { margin: 0 auto 20px; max-width: 30ch; }
+
+/* Botón flotante */
+.fab {
+  position: fixed; z-index: 6;
+  right: calc(16px + env(safe-area-inset-right, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  display: flex; align-items: center; gap: 8px; padding: 16px 24px; border-radius: 999px; border: 0;
+  background: linear-gradient(120deg, var(--hot), var(--amber)); color: #fff; font-weight: 600; font-size: 17px;
+  box-shadow: 0 10px 28px -6px var(--hot); animation: ring 2.4s ease-out infinite;
+}
+@keyframes ring { 0% { box-shadow: 0 10px 28px -6px var(--hot), 0 0 0 0 rgba(255, 45, 135, .55); } 70%, 100% { box-shadow: 0 10px 28px -6px var(--hot), 0 0 0 20px rgba(255, 45, 135, 0); } }
+.fab:active { transform: scale(.94); }
+
+/* Formulario */
+.sheet form { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.sheet h2.f-title { margin: 0; font-family: var(--font-display); font-weight: 800; font-style: italic; font-size: 40px; line-height: 1; text-transform: uppercase; }
+.field { min-width: 0; }
+.pair { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.photo-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.thumb { width: 88px; height: 88px; border-radius: 16px; background: var(--glass); border: 1px dashed var(--line); display: grid; place-items: center; overflow: hidden; color: var(--muted); }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-row input[type=file] { display: none; }
+.err-text { color: #ffb3c0; font-size: 14px; margin: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"><i></i><i></i><i></i></div>
+
+<div class="wrap">
+  <header class="hero">
+    <div>
+      <h1>Mis máquinas</h1>
+      <span class="count" id="count"></span>
+    </div>
+    <svg class="barbell" viewBox="0 0 150 90" aria-hidden="true">
+      <circle class="sp s1" cx="14" cy="14" r="4" fill="#00e0ff"/>
+      <circle class="sp s2" cx="138" cy="20" r="3" fill="#c8ff3b"/>
+      <circle class="sp s3" cx="75" cy="6" r="3" fill="#ffffff"/>
+      <g class="lift">
+        <rect x="6" y="42" width="138" height="6" rx="3" fill="#ffffff"/>
+        <rect x="20" y="12" width="13" height="66" rx="6" fill="#ff2d87"/>
+        <rect x="35" y="21" width="10" height="48" rx="5" fill="#ffb300"/>
+        <rect x="117" y="12" width="13" height="66" rx="6" fill="#ff2d87"/>
+        <rect x="105" y="21" width="10" height="48" rx="5" fill="#ffb300"/>
+      </g>
+    </svg>
+  </header>
+  <input class="search" id="search" type="search" placeholder="Buscar máquina" autocomplete="off" hidden>
+  <div id="notice" class="notice" hidden></div>
+  <main id="list" class="list" aria-live="polite"></main>
+</div>
+
+<div class="sheet" id="detail" hidden><div class="detail" id="detail-body"></div></div>
+
+<button class="fab" id="fab" type="button" aria-label="Agregar máquina">
+  <svg width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M9 2v14M2 9h14"/></svg>
+  Nueva
+</button>
+
+<div class="sheet" id="sheet" hidden>
+  <form id="form" autocomplete="off">
+    <h2 class="f-title" id="form-title">Nueva máquina</h2>
+    <div class="field">
+      <label class="label" for="f-name">Nombre</label>
+      <input id="f-name" type="text" required maxlength="80" placeholder="Prensa de piernas">
+    </div>
+    <div class="pair">
+      <div class="field">
+        <label class="label" for="f-weight">Peso (kg)</label>
+        <input id="f-weight" type="text" inputmode="decimal" placeholder="40" required>
+      </div>
+      <div class="field">
+        <label class="label" for="f-sets">Series</label>
+        <input id="f-sets" type="number" inputmode="numeric" min="0" max="99" placeholder="4">
+      </div>
+      <div class="field">
+        <label class="label" for="f-reps">Repeticiones</label>
+        <input id="f-reps" type="number" inputmode="numeric" min="0" max="999" placeholder="12">
+      </div>
+    </div>
+    <div class="field">
+      <span class="label">Foto</span>
+      <div class="photo-row">
+        <div class="thumb" id="f-thumb"></div>
+        <button class="btn" type="button" id="f-photo-btn">Sacar o elegir foto</button>
+        <button class="btn" type="button" id="f-photo-del" hidden>Quitar</button>
+        <input id="f-photo" type="file" accept="image/*">
+      </div>
+    </div>
+    <div class="field">
+      <label class="label" for="f-notes">Observaciones</label>
+      <textarea id="f-notes" rows="4" maxlength="2000" placeholder="Ajustar el asiento en la posición 4. Bajar despacio."></textarea>
+    </div>
+    <p class="err-text" id="f-err" hidden></p>
+    <div class="actions">
+      <button class="btn primary" type="submit">Guardar</button>
+      <button class="btn" type="button" id="f-cancel">Cancelar</button>
+    </div>
+  </form>
+</div>
+
+<script>
+(function () {
+  var STEP = 0.5;
+  var ART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg>';
+  var PALETTE = [
+    ['#ff2d87', '#ff9d00'], ['#8f5bff', '#00e0ff'], ['#00e08a', '#c8ff3b'],
+    ['#ff4545', '#ffc400'], ['#2f7bff', '#00f0ff'], ['#e040fb', '#7c4dff']
+  ];
+  var BARBELL = '<svg class="barbell" viewBox="0 0 150 90" aria-hidden="true"><g class="lift">' +
+    '<rect x="6" y="42" width="138" height="6" rx="3" fill="#ffffff"/>' +
+    '<rect x="20" y="12" width="13" height="66" rx="6" fill="#ff2d87"/><rect x="35" y="21" width="10" height="48" rx="5" fill="#ffb300"/>' +
+    '<rect x="117" y="12" width="13" height="66" rx="6" fill="#ff2d87"/><rect x="105" y="21" width="10" height="48" rx="5" fill="#ffb300"/></g></svg>';
+
+  var $ = function (s) { return document.querySelector(s); };
+  var machines = new Map();
+  var dirty = new Set();
+  var timers = {};
+  var store = null;
+  var detailId = null, confirmId = null, editingId = null, formPhoto = '', query = '';
+  var loaded = false, deferRender = false, enterList = true, enterDetail = false;
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  var nf = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
+  function fmt(n) { return nf.format(n); }
+  function todayStr() {
+    var d = new Date(), p = function (n) { return String(n).padStart(2, '0'); };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  function shortDate(s) {
+    var a = String(s).split('-');
+    var d = new Date(+a[0], +a[1] - 1, +a[2]);
+    var o = { day: 'numeric', month: 'short' };
+    if (d.getFullYear() !== new Date().getFullYear()) o.year = 'numeric';
+    return d.toLocaleDateString('es-AR', o);
+  }
+  function newId() { return 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function colors(id) {
+    var h = 0;
+    for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+    return PALETTE[h % PALETTE.length];
+  }
+  function gradStyle(id) { var g = colors(id); return '--g1:' + g[0] + ';--g2:' + g[1]; }
+
+  /* ---------- Datos ---------- */
+  function clean(m) {
+    return {
+      name: m.name, weight: m.weight, sets: m.sets || 0, reps: m.reps || 0,
+      notes: m.notes || '', photo: m.photo || '',
+      history: (m.history || []).slice(-200), created: m.created || Date.now(), updated: Date.now()
+    };
+  }
+  function fromDoc(id, d) {
+    return {
+      id: id, name: d.name || 'Sin nombre', weight: Number(d.weight) || 0, sets: d.sets || 0, reps: d.reps || 0,
+      notes: d.notes || '', photo: d.photo || '', history: (d.history || []).map(function (h) { return { d: h.d, w: h.w }; }),
+      created: d.created || 0
+    };
+  }
+  function setWeight(m, w) {
+    m.weight = w;
+    var last = m.history[m.history.length - 1];
+    if (last && last.d === todayStr()) last.w = w;
+    else m.history.push({ d: todayStr(), w: w });
+  }
+  function flush(id) {
+    clearTimeout(timers[id]);
+    if (!store) { timers[id] = setTimeout(function () { flush(id); }, 300); return; }
+    dirty.delete(id);
+    var m = machines.get(id);
+    if (m) store.save(id, clean(m));
+  }
+  function touch(id) {
+    dirty.add(id);
+    clearTimeout(timers[id]);
+    timers[id] = setTimeout(function () { flush(id); }, 500);
+  }
+
+  function showNotice(text, isErr) {
+    var n = $('#notice');
+    if (!text) { n.hidden = true; return; }
+    n.textContent = text; n.className = 'notice' + (isErr ? ' err' : ''); n.hidden = false;
+  }
+
+  function makeLocalStore() {
+    var KEY = 'gym.machines';
+    function read() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
+    function write(o) { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) { showNotice('No se pudo guardar en este navegador.', true); } }
+    return {
+      local: true,
+      subscribe: function (cb) { var o = read(); cb(Object.keys(o).map(function (k) { return [k, o[k]]; })); },
+      save: function (id, data) { var o = read(); o[id] = data; write(o); },
+      remove: function (id) { var o = read(); delete o[id]; write(o); }
+    };
+  }
+
+  async function makeStore() {
+    var db = null, user = null, uid = null;
+    try {
+      if (window.claude && window.claude.use) {
+        db = await window.claude.use('db');
+        user = await window.claude.use('user');
+        if (db && user) uid = await user.id();
+      }
+    } catch (e) { db = null; }
+    if (!db || !uid) return makeLocalStore();
+
+    var col = db.collection('data/users/' + uid);
+    var queue = {};
+    function chain(id, fn) {
+      queue[id] = (queue[id] || Promise.resolve()).then(fn).catch(function (e) {
+        showNotice(e && e.code === 'quota_exceeded'
+          ? 'Se llenó el espacio. Quitá fotos o máquinas que no uses.'
+          : 'No se pudo guardar el último cambio. Revisá la conexión.', true);
+      });
+    }
+    return {
+      local: false,
+      subscribe: function (cb, onErr) {
+        col.onSnapshot(function (snap) {
+          cb(snap.docs.map(function (d) { return [d.id, d.data()]; }), snap.metadata.fromCache);
+        }, onErr);
+      },
+      save: function (id, data) { chain(id, function () { return col.doc(id).set(data); }); },
+      remove: function (id) { chain(id, function () { return col.doc(id).delete(); }); }
+    };
+  }
+
+  function onData(rows) {
+    loaded = true;
+    clearTimeout(loadTimer);
+    var next = new Map();
+    rows.forEach(function (r) {
+      var id = r[0];
+      next.set(id, dirty.has(id) && machines.has(id) ? machines.get(id) : fromDoc(id, r[1]));
+    });
+    machines = next;
+    if (detailId && !machines.has(detailId)) detailId = null;
+    safeRender();
+  }
+
+  /* ---------- Vista ---------- */
+  function safeRender() {
+    var a = document.activeElement;
+    if (a && (a.tagName === 'TEXTAREA' || a.tagName === 'INPUT') && $('#detail').contains(a)) { deferRender = true; return; }
+    render();
+  }
+
+  function sorted() {
+    var q = query.trim().toLowerCase();
+    return Array.from(machines.values())
+      .filter(function (m) { return !q || m.name.toLowerCase().indexOf(q) !== -1; })
+      .sort(function (a, b) { return a.name.localeCompare(b.name, 'es'); });
+  }
+
+  function progress(m) {
+    if (m.history.length < 2) return '';
+    var first = m.history[0], diff = m.weight - first.w;
+    if (diff === 0) return '';
+    return ' · ' + (diff > 0 ? '+' : '') + fmt(diff) + ' kg desde el ' + shortDate(first.d);
+  }
+  function setDate(m) {
+    var last = m.history[m.history.length - 1];
+    return last ? shortDate(last.d) : '';
+  }
+  function srText(m) {
+    return m.sets && m.reps ? m.sets + ' × ' + m.reps : (m.sets ? m.sets + ' series' : (m.reps ? m.reps + ' reps' : 'Sin series cargadas'));
+  }
+  function artHtml(m, big) {
+    return m.photo
+      ? '<img class="c-img" src="' + esc(m.photo) + '" alt="' + (big ? 'Foto de ' + esc(m.name) : '') + '"><span class="c-tint"></span>'
+      : '<span class="c-art">' + ART + '</span>';
+  }
+
+  function cardHtml(m, i) {
+    return '<button class="card" type="button" data-act="open" data-id="' + esc(m.id) + '" style="' + gradStyle(m.id) + ';--i:' + i + '">' +
+      '<span class="c-bg"></span>' + artHtml(m, false) + '<span class="c-shade"></span>' +
+      '<span class="c-info"><span class="name">' + esc(m.name) + '</span><span class="meta">' + esc(srText(m)) + '</span>' +
+      '<span class="chip">' + (setDate(m) ? 'Desde el ' + esc(setDate(m)) : '') + '</span></span>' +
+      '<span class="c-wt"><span class="num">' + fmt(m.weight) + '</span><span class="unit">kg</span></span>' +
+      '</button>';
+  }
+
+  function barsHtml(m) {
+    var hs = m.history.slice(-8);
+    if (!hs.length) return '';
+    var ws = hs.map(function (h) { return h.w; }), min = Math.min.apply(null, ws), span = Math.max.apply(null, ws) - min;
+    var cols = hs.map(function (e, i) {
+      var hgt = span ? 30 + ((e.w - min) / span) * 70 : 64;
+      return '<div class="bar"><span class="bv">' + fmt(e.w) + '</span><span class="bf" style="height:' + Math.round(hgt) + 'px;--k:' + i + '"></span><span class="bd">' + esc(shortDate(e.d)) + '</span></div>';
+    }).join('');
+    return '<div><span class="label">Progreso del peso (kg)</span><div class="bars">' + cols + '</div></div>';
+  }
+
+  function detailHtml(m) {
+    var h = '<div class="d-hero"><span class="c-bg"></span>' + artHtml(m, true) + '<span class="c-shade"></span>' +
+      '<button class="back" type="button" data-act="back">← Volver</button>' +
+      '<h2 class="d-name">' + esc(m.name) + '</h2></div>';
+    h += '<div class="panel"><div class="d-wrap"><div class="d-weight"><span class="num">' + fmt(m.weight) + '</span><span class="unit">kg</span></div>' +
+      '<p class="meta">' + esc(srText(m)) + progress(m) + ' · Peso establecido el ' + esc(setDate(m)) + '</p></div>' +
+      '<div class="stepper">' +
+      '<button class="step" type="button" data-act="minus" aria-label="Bajar ' + fmt(STEP) + ' kilos">− ' + fmt(STEP) + '</button>' +
+      '<button class="step plus" type="button" data-act="plus" aria-label="Subir ' + fmt(STEP) + ' kilos">+ ' + fmt(STEP) + '</button>' +
+      '</div></div>';
+    h += '<div class="panel"><div><label class="label" for="d-notes">Observaciones</label>' +
+      '<textarea class="notes" id="d-notes" data-notes placeholder="Asiento, agarre, sensaciones…">' + esc(m.notes) + '</textarea></div></div>';
+    var bars = barsHtml(m);
+    if (bars) h += '<div class="panel">' + bars + '</div>';
+    h += '<div class="actions">';
+    if (confirmId === m.id) {
+      h += '<button class="btn danger solid" type="button" data-act="del-yes">Sí, eliminar</button>' +
+        '<button class="btn" type="button" data-act="del-no">Cancelar</button>';
+    } else {
+      h += '<button class="btn" type="button" data-act="edit">Editar</button><span class="spacer"></span>' +
+        '<button class="btn danger" type="button" data-act="del">Eliminar</button>';
+    }
+    return h + '</div>';
+  }
+
+  function renderDetail() {
+    var box = $('#detail'), body = $('#detail-body'), m = detailId && machines.get(detailId);
+    if (!m) { box.hidden = true; return; }
+    var wasHidden = box.hidden;
+    box.hidden = false;
+    var g = colors(m.id);
+    body.style.setProperty('--g1', g[0]);
+    body.style.setProperty('--g2', g[1]);
+    body.classList.toggle('enter', enterDetail);
+    enterDetail = false;
+    body.innerHTML = detailHtml(m);
+    if (wasHidden) box.scrollTop = 0;
+  }
+
+  function burst(text, down) {
+    var w = $('#detail-body .d-wrap');
+    if (!w) return;
+    var n = w.querySelector('.num');
+    if (n) n.classList.add('pop');
+    var s = document.createElement('span');
+    s.className = 'burst' + (down ? ' down' : '');
+    s.textContent = text;
+    w.appendChild(s);
+    setTimeout(function () { s.remove(); }, 950);
+  }
+
+  function render() {
+    deferRender = false;
+    renderDetail();
+    var list = $('#list'), total = machines.size;
+    $('#count').textContent = total ? total + (total === 1 ? ' máquina' : ' máquinas') : '';
+    $('#search').hidden = total < 5;
+    if (!loaded) { list.innerHTML = '<div class="empty"><p>Cargando tus máquinas…</p></div>'; return; }
+    if (!total) {
+      list.innerHTML = '<div class="empty">' + BARBELL +
+        '<h2>Todavía no cargaste máquinas</h2><p>Agregá la primera con su foto, el peso que usás hoy y tus series.</p>' +
+        '<button class="btn primary" type="button" data-act="new">Agregar mi primera máquina</button></div>';
+      return;
+    }
+    var items = sorted();
+    list.classList.toggle('enter', enterList);
+    list.innerHTML = items.length ? items.map(cardHtml).join('') :
+      '<div class="empty"><p>No hay máquinas que coincidan con "' + esc(query) + '".</p></div>';
+    enterList = false;
+  }
+
+  /* ---------- Acciones ---------- */
+  function act(a, id) {
+    var m = id && machines.get(id);
+    if (a === 'new') return openForm(null);
+    if (!m) return;
+    if (a === 'open') { detailId = id; confirmId = null; enterDetail = true; render(); }
+    else if (a === 'back') { detailId = null; confirmId = null; render(); }
+    else if (a === 'plus' || a === 'minus') {
+      var w = Math.max(0, Math.round((m.weight + (a === 'plus' ? STEP : -STEP)) * 100) / 100);
+      if (w !== m.weight) {
+        var up = w > m.weight;
+        setWeight(m, w); touch(id); render();
+        burst((up ? '+' : '−') + fmt(STEP), !up);
+      }
+    }
+    else if (a === 'edit') openForm(id);
+    else if (a === 'del') { confirmId = id; render(); }
+    else if (a === 'del-no') { confirmId = null; render(); }
+    else if (a === 'del-yes') {
+      clearTimeout(timers[id]); dirty.delete(id);
+      machines.delete(id); detailId = null; confirmId = null;
+      store.remove(id); render();
+    }
+  }
+  $('#list').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-act]');
+    if (b) act(b.dataset.act, b.dataset.id);
+  });
+  $('#detail').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-act]');
+    if (b) act(b.dataset.act, detailId);
+  });
+  $('#detail').addEventListener('input', function (e) {
+    if (!e.target.matches('[data-notes]')) return;
+    var m = machines.get(detailId);
+    if (m) { m.notes = e.target.value; touch(detailId); }
+  });
+  $('#detail').addEventListener('focusout', function () {
+    setTimeout(function () { if (deferRender && !$('#detail').contains(document.activeElement)) render(); }, 0);
+  });
+  $('#search').addEventListener('input', function (e) { query = e.target.value; render(); });
+  $('#fab').addEventListener('click', function () { openForm(null); });
+
+  /* ---------- Formulario ---------- */
+  function showPhoto() {
+    $('#f-thumb').innerHTML = formPhoto ? '<img src="' + esc(formPhoto) + '" alt="">' : '<span style="width:34px;height:34px;display:block">' + ART + '</span>';
+    $('#f-photo-del').hidden = !formPhoto;
+    $('#f-photo-btn').textContent = formPhoto ? 'Cambiar foto' : 'Sacar o elegir foto';
+  }
+  function openForm(id) {
+    editingId = id;
+    var m = id ? machines.get(id) : null;
+    $('#form-title').textContent = m ? 'Editar máquina' : 'Nueva máquina';
+    $('#f-name').value = m ? m.name : '';
+    $('#f-weight').value = m ? String(m.weight).replace('.', ',') : '';
+    $('#f-sets').value = m && m.sets ? m.sets : '';
+    $('#f-reps').value = m && m.reps ? m.reps : '';
+    $('#f-notes').value = m ? m.notes : '';
+    formPhoto = m ? m.photo : '';
+    $('#f-err').hidden = true;
+    showPhoto();
+    $('#sheet').hidden = false;
+    $('#sheet').scrollTop = 0;
+    $('#f-name').focus();
+  }
+  function closeForm() { $('#sheet').hidden = true; }
+  $('#f-cancel').addEventListener('click', closeForm);
+  $('#f-photo-btn').addEventListener('click', function () { $('#f-photo').click(); });
+  $('#f-photo-del').addEventListener('click', function () { formPhoto = ''; showPhoto(); });
+
+  function shrink(file) {
+    return new Promise(function (res, rej) {
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        var s = Math.min(1, 640 / Math.max(img.width, img.height));
+        var c = document.createElement('canvas');
+        c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        res(c.toDataURL('image/jpeg', 0.72));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); rej(new Error('img')); };
+      img.src = url;
+    });
+  }
+  $('#f-photo').addEventListener('change', async function (e) {
+    var f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    try { formPhoto = await shrink(f); showPhoto(); $('#f-err').hidden = true; }
+    catch (err) { $('#f-err').textContent = 'No se pudo leer esa foto. Probá con otra.'; $('#f-err').hidden = false; }
+  });
+
+  $('#form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var name = $('#f-name').value.trim();
+    var w = parseFloat($('#f-weight').value.replace(',', '.'));
+    var err = $('#f-err');
+    if (!name) { err.textContent = 'Escribí el nombre de la máquina.'; err.hidden = false; return; }
+    if (!isFinite(w) || w < 0) { err.textContent = 'El peso tiene que ser un número, por ejemplo 42,5.'; err.hidden = false; return; }
+    w = Math.round(w * 100) / 100;
+    var m = editingId ? machines.get(editingId) : null;
+    if (!m) { m = { id: newId(), history: [], created: Date.now() }; machines.set(m.id, m); }
+    m.name = name;
+    m.sets = parseInt($('#f-sets').value, 10) || 0;
+    m.reps = parseInt($('#f-reps').value, 10) || 0;
+    m.notes = $('#f-notes').value;
+    m.photo = formPhoto;
+    if (!m.history.length || m.weight !== w) setWeight(m, w);
+    flush(m.id);
+    closeForm();
+    render();
+  });
+
+  /* ---------- Inicio ---------- */
+  var loadTimer = setTimeout(function () {
+    if (!loaded) showNotice('Tarda en conectar con tu cuenta. Los cambios se guardan apenas vuelva la conexión.', false);
+  }, 10000);
+
+  render();
+  makeStore().then(function (s) {
+    store = s;
+    if (s.local) showNotice('No se pudo conectar con tu cuenta. Por ahora los datos quedan solo en este navegador.', false);
+    s.subscribe(function (rows) { onData(rows); }, function () {
+      showNotice('Se perdió el acceso a tus datos. Volvé a abrir la página.', true);
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
