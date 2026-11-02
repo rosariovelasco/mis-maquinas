@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mis Máquinas</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b0620">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&family=Barlow:wght@400;500;600&display=swap">
 <style>
 /* Concepto: noche morada con color de neón. Cada máquina tiene su propio degradado vivo, y todo se mueve un poco: fondo, barra del encabezado, tarjetas y el peso cuando cambia. */
@@ -712,7 +716,7 @@ textarea.notes { min-height: 96px; }
   render();
   makeStore().then(function (s) {
     store = s;
-    if (s.local) showNotice('No se pudo conectar con tu cuenta. Por ahora los datos quedan solo en este navegador.', false);
+    if (s.local && window.claude) showNotice('No se pudo conectar con tu cuenta. Por ahora los datos quedan solo en este navegador.', false);
     s.subscribe(function (rows) { onData(rows); }, function () {
       showNotice('Se perdió el acceso a tus datos. Volvé a abrir la página.', true);
     });
